@@ -7,6 +7,8 @@ using MockHotelProject.DataLayer.QueryObjects;
 using Microsoft.AspNetCore.Mvc;
 using MockHotelProject.DataLayer.Models;
 using MockHotelProject.Mediator.AccomodationRequest;
+using System.Net;
+using MockHotelProject.AccomodationApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +23,15 @@ builder.Services.AddDbContext<DatabaseContext>(options =>
 builder.Services.AddMediatR(typeof(MediatRAssemblyEntry).Assembly);
 builder.Services.RegisterDataLayerDependencies(builder.Configuration);
 var app = builder.Build();
+
+app.UseExceptionHandler(error =>
+{
+    error.Run(async httpContext =>
+    {
+        httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        //CAN ADD LOGGING OF EXCEPTIONS HERE
+    });
+});
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -61,20 +72,29 @@ app.MapGet("/getAllAccomodationsByCountry", (IMediator _mediator, [FromQuery] st
     return _mediator.Send(new AccomodationSelectRequest(new AccomodationQueryParameters { Country = country }));
 });
 
-app.MapPost("/postAccomodation", (IMediator _mediator, [FromBody] Accomodations accomodation) =>
+app.MapPost("/insertAccomodation", (IMediator _mediator, [FromBody] InsertModel accomodation) =>
 {
-    return _mediator.Send(new AccomodationInsertRequest(accomodation));
+    var returnObj = _mediator.Send(new AccomodationInsertRequest( 
+        new Accomodations 
+        { 
+            Name = accomodation.Name,
+            Address = accomodation.Address,
+            City = accomodation.City,
+            Country = accomodation.Country,
+        }));
+    return returnObj.Result != null ? Results.Ok() : Results.StatusCode(500);
 });
 
-app.MapPut("/putAccomodation", (IMediator _mediator, [FromBody] Accomodations accomodation) =>
+app.MapPut("/updateAccomodation", (IMediator _mediator, [FromBody] Accomodations accomodation) =>
 {
-    return _mediator.Send(new AccomodationUpdateRequest(accomodation));
+    var returnObj = _mediator.Send(new AccomodationUpdateRequest(accomodation));
+    return returnObj.Result != null ? Results.Ok() : Results.StatusCode(500);
 });
 
 app.MapDelete("/deleteAccomodation", (IMediator _mediator, [FromQuery] int id) =>
 {
-    var returnNumebr = _mediator.Send(new AccomodationDeleteRequest(id));
-    return returnNumebr.Result == 1 ? Results.Ok() : Results.NotFound();
+    var returnNumber = _mediator.Send(new AccomodationDeleteRequest(id));
+    return returnNumber.Result == 1 ? Results.Ok() : Results.NotFound();
 });
 
 app.Run();

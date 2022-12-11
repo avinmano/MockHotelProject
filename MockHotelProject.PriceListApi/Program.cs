@@ -7,6 +7,8 @@ using MockHotelProject.DataLayer.QueryObjects;
 using MockHotelProject.Mediator.RoomTypeRequest;
 using MockHotelProject.Mediator.PriceListRequest;
 using MockHotelProject.DataLayer.Models;
+using System.Net;
+using MockHotelProject.PriceListApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +23,15 @@ builder.Services.AddDbContext<DatabaseContext>(options =>
 builder.Services.AddMediatR(typeof(MediatRAssemblyEntry).Assembly);
 builder.Services.RegisterDataLayerDependencies(builder.Configuration);
 var app = builder.Build();
+
+app.UseExceptionHandler(error =>
+{
+    error.Run(async httpContext =>
+    {
+        httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        //CAN ADD LOGGING OF EXCEPTIONS HERE
+    });
+});
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -56,16 +67,21 @@ app.MapGet("/getPriceListByPriceRange", (IMediator _mediator, decimal minPrice, 
     return _mediator.Send(new PriceListSelectRequest(new PriceListQueryParameters() { MinPrice = minPrice, MaxPrice = maxPrice }));
 });
 
-app.MapPost("/insertPrice", (IMediator _mediator, PriceList price) =>
+app.MapPost("/insertPrice", (IMediator _mediator, InsertModel price) =>
 {
-    var returbObj = _mediator.Send(new PriceListInsertRequest(price));
-    return returbObj.Result != null ? Results.Ok() : Results.Problem();
+    var returbObj = _mediator.Send(new PriceListInsertRequest(
+        new PriceList 
+        { 
+            IdRoomType = price.IdRoomType,
+            Price = price.Price
+        }));
+    return returbObj.Result != null ? Results.Ok() : Results.Problem("The entered price didn't pass the assigned rule validation");
 });
 
 app.MapPut("/updatePrice", (IMediator _mediator, PriceList price) =>
 {
     var returnObj = _mediator.Send(new PriceListInsertRequest(price));
-    return returnObj.Result != null ? Results.Ok() : Results.Problem();
+    return returnObj.Result != null ? Results.Ok() : Results.Problem("The entered price didn't pass the assigned rule validation");
 });
 app.MapDelete("/deletePriceList", (IMediator _mediator, int idPriceList) =>
 {
@@ -74,8 +90,3 @@ app.MapDelete("/deletePriceList", (IMediator _mediator, int idPriceList) =>
 });
 
 app.Run();
-
-internal record WeatherForecast(DateTime Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

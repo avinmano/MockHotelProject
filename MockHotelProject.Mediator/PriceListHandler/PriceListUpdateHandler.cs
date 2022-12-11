@@ -17,9 +17,13 @@ namespace MockHotelProject.Mediator.PriceListHandler
         private readonly IPriceListRepository _repository;
         private readonly IRoomTypeRepository _roomTypeRepository;
         private readonly IRulesRepository _rulesRepository;
-        public PriceListUpdateHandler(IPriceListRepository repository)
+        public PriceListUpdateHandler(IPriceListRepository repository,
+            IRoomTypeRepository roomTypeRepository,
+            IRulesRepository rulesRepository)
         {
             _repository = repository;
+            _roomTypeRepository = roomTypeRepository;
+            _rulesRepository = rulesRepository;
         }
 
         public async Task<PriceList> Handle(PriceListUpdateRequest request, CancellationToken cancellationToken)
@@ -45,9 +49,9 @@ namespace MockHotelProject.Mediator.PriceListHandler
                     var parentRoomPrice = (await _repository.Select(new PriceListQueryParameters { IdRoomType = roomTypeParent.Id })).First();
 
 
-                    var calc = (parentRoomPrice.Price * rule.Percentage) / 100;
+                    var calc = parentRoomPrice.Price - (parentRoomPrice.Price * rule.Percentage / 100);
 
-                    if (priceListObj.Price > parentRoomPrice.Price + calc)
+                    if (priceListObj.Price > calc)
                         return false;
                 }
 
@@ -56,8 +60,8 @@ namespace MockHotelProject.Mediator.PriceListHandler
                 {
                     var childRoomPrice = (await _repository.Select(new PriceListQueryParameters { IdRoomType = roomTypeChild.Id }));
 
-                    var calc = (priceListObj.Price * rule.Percentage) / 100;
-                    if (childRoomPrice.Any(x => x.Price > priceListObj.Price - calc))
+                    var calc = priceListObj.Price - (priceListObj.Price * rule.Percentage/100) ;
+                    if (childRoomPrice.Any(x => x.Price > calc))
                         return false;
                 }
 
