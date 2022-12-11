@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,14 +12,10 @@ namespace MockHotelProject.DataLayer.Models
     {
         [Key]
         public int Id { get; set; }
-        public int idAccomodation { get; set; }
 
-        public int IdRoomType { get; set; }
-
-        public string Type { get; set; }
+        //[ForeignKey("Accomodation")]
+        public int IdAccomodation { get; set; }
 
         public int Percentage { get; set; }
-
-        public int RuleDescription { get; set; }
     }
 }
